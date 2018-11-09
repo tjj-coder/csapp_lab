@@ -224,8 +224,8 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  int signx=x>>31;
-  int signy=y>>31;
+  int signx=(x>>31)&1;
+  int signy=(y>>31)&1;
   int dif=signx&!signy;
   int same=(!(signx^signy))&((x+~y)>>31);
   return dif|same;
@@ -240,9 +240,7 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  int notzero=(x>>31)|(!!x);
-  return !notzero;
-
+ return ((~x&~(~x+1))>>31)&1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -257,19 +255,20 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
+  int isZero,notZeroMask,bits16,bits8,bits4,bits2,bits1,ans;
   x=x^(x>>31);
-  int isZero=!x;
-  int notZeroMask=(!!x)<<31>>31;
-  int bits16=(!!(x>>16))<<4;
+  isZero=!x;
+  notZeroMask=(!!x)<<31>>31;
+  bits16=(!!(x>>16))<<4;
   x=x>>bits16;
-  int bits8=(!!(x>>8))<<3;
+  bits8=(!!(x>>8))<<3;
   x=x>>bits8;
-  int bits4=(!!(x>>4))<<2;
+  bits4=(!!(x>>4))<<2;
   x=x>>bits4;
-  int bits2=(!!(x>>2))<<1;
+  bits2=(!!(x>>2))<<1;
   x=x>>bits2;
-  int bits1=!!(x>>1);
-  int ans=bits16+bits8+bits4+bits2+bits1+2;
+  bits1=!!(x>>1);
+  ans=bits16+bits8+bits4+bits2+bits1+2;
   return isZero|(notZeroMask&ans);
 }
 //float
@@ -285,7 +284,21 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+  int maskS=0x80000000;
+  int maskE=0x7f800000;
+  int maskF=0x007fffff;
+  int s=uf&maskS;
+  int exp=uf&maskE;
+  int frac=uf&maskF;
+  if(exp==maskE){
+    return uf;
+  }
+  if(exp==0){
+    frac=frac<<1;
+  }else{
+    exp=exp+(1<<23);
+  }
+  return s|exp|frac;
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -300,7 +313,29 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+  int maskS=0x80000000;
+  int maskE=0x7f800000;
+  int maskF=0x007fffff;
+  int s=uf&maskS;
+  int exp=uf&maskE;
+  int frac=uf&maskF;
+  int ans=0;
+  int expV=((exp>>23)&0xff)-127;
+  if(exp==maskE||expV>30){
+    return 0x80000000u;
+  }else if(exp==0||expV<0){
+    return 0u;
+  }
+  ans=frac|(1<<23);
+  if(expV>23){
+    ans=ans<<(expV-23);
+  }else{
+    ans=ans>>(23-expV);
+  }
+  if(s){
+    ans=~ans+1;
+  }
+  return ans;
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
@@ -316,5 +351,12 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+    if(x<-126){
+      return 0;
+    }
+    if(x>127){
+      return 0x7f800000;
+    }
+    return (x+127)<<23;
+
 }
