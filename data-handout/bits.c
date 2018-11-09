@@ -199,7 +199,11 @@ int negate(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
-  return 2;
+  int a=(~0x30)+1;
+  int b=(~x)+1;
+  int isLager=!((x+a)>>31);
+  int isSmaller=!((b+0x39)>>31);
+  return isLager&isSmaller;
 }
 /* 
  * conditional - same as x ? y : z 
@@ -209,7 +213,8 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return 2;
+  int mask=~!x+1;
+  return (y&~mask)|(z&mask);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -219,7 +224,11 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+  int signx=x>>31;
+  int signy=y>>31;
+  int dif=signx&!signy;
+  int same=(!(signx^signy))&((x+~y)>>31);
+  return dif|same;
 }
 //4
 /* 
@@ -231,7 +240,9 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  return 2;
+  int notzero=(x>>31)|(!!x);
+  return !notzero;
+
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -246,7 +257,20 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  return 0;
+  x=x^(x>>31);
+  int isZero=!x;
+  int notZeroMask=(!!x)<<31>>31;
+  int bits16=(!!(x>>16))<<4;
+  x=x>>bits16;
+  int bits8=(!!(x>>8))<<3;
+  x=x>>bits8;
+  int bits4=(!!(x>>4))<<2;
+  x=x>>bits4;
+  int bits2=(!!(x>>2))<<1;
+  x=x>>bits2;
+  int bits1=!!(x>>1);
+  int ans=bits16+bits8+bits4+bits2+bits1+2;
+  return isZero|(notZeroMask&ans);
 }
 //float
 /* 
